@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Poste de pilotage IA — La poubelle intelligente</title>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
+<style>
+  :root{
+    --bleu:#2563EB; --bleu-fonce:#1E40AF; --jaune:#EAB308; --marron:#92400E;
+    --vert:#16A34A; --rouge:#DC2626; --gris:#6B7280; --fond:#F3F6FC;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:Arial, Helvetica, sans-serif; background:var(--fond); color:#1F2937; padding-bottom:40px;}
+  header{background:var(--bleu); color:#fff; padding:14px 24px; display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:6px;}
+  header h1{font-size:1.25rem;}
+  header .sub{font-size:.8rem; opacity:.85; font-style:italic;}
+  main{max-width:1060px; margin:18px auto; padding:0 16px; display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  @media(max-width:820px){ main{grid-template-columns:1fr;} }
+  .card{background:#fff; border-radius:10px; box-shadow:0 1px 4px rgba(0,0,0,.08); padding:16px;}
+  .card h2{font-size:.95rem; color:var(--bleu-fonce); text-transform:uppercase; letter-spacing:.4px;
+    border-bottom:2px solid var(--bleu); padding-bottom:6px; margin-bottom:12px; display:flex; align-items:center; gap:8px;}
+  .num{background:var(--bleu); color:#fff; border-radius:50%; width:22px; height:22px; display:inline-flex;
+    align-items:center; justify-content:center; font-size:.8rem; flex:none;}
+  label{font-size:.82rem; font-weight:bold; display:block; margin:8px 0 4px;}
+  input[type=text]{width:100%; padding:8px; border:1px solid #CBD5E1; border-radius:6px; font-size:.85rem;}
+  button{background:var(--bleu); color:#fff; border:none; border-radius:6px; padding:9px 14px;
+    font-size:.88rem; font-weight:bold; cursor:pointer; margin-top:8px;}
+  button:hover{background:var(--bleu-fonce);}
+  button:disabled{background:#9CA3AF; cursor:not-allowed;}
+  button.secondaire{background:#fff; color:var(--bleu); border:2px solid var(--bleu);}
+  button.secondaire:hover{background:#EFF6FF;}
+  .badge{display:inline-block; padding:3px 10px; border-radius:999px; font-size:.75rem; font-weight:bold; margin-left:8px;}
+  .badge.off{background:#FEE2E2; color:var(--rouge);}
+  .badge.on{background:#DCFCE7; color:var(--vert);}
+  #webcam-holder{display:flex; justify-content:center; margin:8px 0; min-height:60px;}
+  #webcam-holder canvas{border-radius:8px; border:3px solid var(--bleu);}
+  .classe{margin:8px 0;}
+  .classe .ligne{display:flex; align-items:center; gap:8px; font-size:.82rem;}
+  .classe .nom{width:32%; font-weight:bold; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .barre{flex:1; background:#E5E7EB; border-radius:6px; height:18px; overflow:hidden;}
+  .barre>div{height:100%; width:0%; background:var(--bleu); transition:width .15s; border-radius:6px;}
+  .pct{width:52px; text-align:right; font-variant-numeric:tabular-nums;}
+  select{padding:4px 6px; border:1px solid #CBD5E1; border-radius:6px; font-size:.8rem;}
+  .reglage{display:flex; align-items:center; gap:10px; margin:10px 0; font-size:.84rem;}
+  .reglage input[type=range]{flex:1;}
+  .reglage output{font-weight:bold; width:56px; text-align:right;}
+  #decision{font-size:1.05rem; font-weight:bold; text-align:center; padding:12px; border-radius:8px;
+    background:#F1F5F9; margin-top:10px; min-height:48px;}
+  #decision.jaune{background:#FEF9C3; color:#854D0E;}
+  #decision.marron{background:#EFE5DA; color:var(--marron);}
+  #journal{background:#0F172A; color:#BFDBFE; font-family:Consolas, monospace; font-size:.76rem;
+    border-radius:8px; padding:10px; height:150px; overflow-y:auto; margin-top:8px; white-space:pre-wrap;}
+  .manuel{display:flex; gap:8px; flex-wrap:wrap;}
+  .aide{font-size:.78rem; color:var(--gris); font-style:italic; margin-top:6px;}
+  #alerte-nav{max-width:1060px; margin:14px auto 0; padding:0 16px; display:none;}
+  #alerte-nav .card{background:#FEF2F2; border:2px solid var(--rouge); color:#7F1D1D; font-size:.9rem;}
+  footer{text-align:center; font-size:.75rem; color:var(--gris); margin-top:24px;}
+</style>
+</head>
+<body>
+<header>
+  <h1>🗑️🤖 Poste de pilotage IA — La poubelle intelligente</h1>
+  <span class="sub">Technologie 4° · Collège Saint-Pierre · Les Essarts</span>
+</header>
+
+<div id="alerte-nav"><div class="card">⚠️ Votre navigateur ne prend pas en charge le <b>Web Serial</b>.
+Utilisez <b>Google Chrome</b> ou <b>Microsoft Edge</b> pour piloter la carte Arduino.</div></div>
+
+<main>
+  <!-- ================= COLONNE IA ================= -->
+  <section class="card">
+    <h2><span class="num">1</span> Charger le modèle d'IA</h2>
+    <label for="url-modele">Lien du modèle Teachable Machine (activité 2) :</label>
+    <input type="text" id="url-modele" placeholder="https://teachablemachine.withgoogle.com/models/XXXXXXX/">
+    <button id="btn-charger">Charger le modèle et démarrer la webcam</button>
+    <p class="aide">Autorisez la webcam quand le navigateur le demande. Ne filmez que les objets, jamais les visages.</p>
+    <div id="webcam-holder"></div>
+    <div id="predictions"></div>
+  </section>
+
+  <!-- ================= COLONNE ARDUINO ================= -->
+  <section class="card">
+    <h2><span class="num">2</span> Connecter la carte Arduino <span id="etat-serie" class="badge off">déconnectée</span></h2>
+    <button id="btn-serie">Connecter l'Arduino (USB ou Bluetooth)</button>
+    <p class="aide">⚠️ Fermez d'abord la connexion dans Codecraft : un port série ne peut être utilisé que par un seul logiciel.
+    La carte redémarre à la connexion, la page attend 2 secondes automatiquement.<br>
+    📡 <b>Mode sans fil</b> : si un shield Bluetooth est appairé à Windows (code 0000 ou 1234), choisissez son
+    port « COM Bluetooth sortant » dans la liste au lieu du port USB — rien d'autre ne change.</p>
+
+    <label>Test manuel (fonctionne sans modèle — pratique pour l'activité 3) :</label>
+    <div class="manuel">
+      <button class="secondaire" data-cmd="1" disabled>Envoyer 1 (jaune)</button>
+      <button class="secondaire" data-cmd="2" disabled>Envoyer 2 (marron)</button>
+      <button class="secondaire" data-cmd="0" disabled>Envoyer 0 (rien)</button>
+    </div>
+  </section>
+
+  <!-- ================= REGLAGES ================= -->
+  <section class="card">
+    <h2><span class="num">3</span> Réglages de décision</h2>
+    <div class="reglage">
+      <span>Seuil de confiance</span>
+      <input type="range" id="seuil" min="50" max="99" value="85">
+      <output id="seuil-val">85 %</output>
+    </div>
+    <div class="reglage">
+      <span>Stabilité exigée</span>
+      <input type="range" id="stable" min="0" max="3000" step="250" value="1000">
+      <output id="stable-val">1,0 s</output>
+    </div>
+    <div class="reglage">
+      <span>Pause après action</span>
+      <input type="range" id="cooldown" min="2000" max="10000" step="500" value="5000">
+      <output id="cooldown-val">5,0 s</output>
+    </div>
+    <div id="mapping"></div>
+    <p class="aide">Chaque classe du modèle est associée à une commande envoyée à l'Arduino ('1' = couvercle jaune, '2' = couvercle marron).</p>
+  </section>
+
+  <!-- ================= DECISION + JOURNAL ================= -->
+  <section class="card">
+    <h2><span class="num">4</span> Décision et journal</h2>
+    <div id="decision">En attente du modèle…</div>
+    <div id="journal"></div>
+  </section>
+</main>
+
+<footer>Séquence « La poubelle intelligente » — page autonome (Teachable Machine + Web Serial, 9600 bauds)</footer>
+
+<script>
+"use strict";
+/* ---------------- état global ---------------- */
+let modele = null, webcam = null, labels = [];
+let port = null, writer = null, serieOK = false;
+let candidat = null, candidatDepuis = 0, prochainEnvoi = 0;
+
+const $ = id => document.getElementById(id);
+const journal = (msg, cls) => {
+  const d = new Date().toLocaleTimeString('fr-FR');
+  $('journal').textContent += `[${d}] ${msg}\n`;
+  $('journal').scrollTop = $('journal').scrollHeight;
+};
+
+/* ---------------- compatibilité ---------------- */
+if (!('serial' in navigator)) $('alerte-nav').style.display = 'block';
+
+/* ---------------- réglages ---------------- */
+const fmtS = v => (v/1000).toLocaleString('fr-FR',{minimumFractionDigits:1}) + ' s';
+$('seuil').oninput   = e => $('seuil-val').textContent = e.target.value + ' %';
+$('stable').oninput  = e => $('stable-val').textContent = fmtS(e.target.value);
+$('cooldown').oninput= e => $('cooldown-val').textContent = fmtS(e.target.value);
+
+/* ---------------- modèle IA ---------------- */
+$('btn-charger').onclick = async () => {
+  let url = $('url-modele').value.trim();
+  if (!url) { alert('Collez d\u2019abord le lien du modèle (activité 2).'); return; }
+  if (!url.endsWith('/')) url += '/';
+  $('btn-charger').disabled = true;
+  journal('Chargement du modèle…');
+  try {
+    modele = await tmImage.load(url + 'model.json', url + 'metadata.json');
+    labels = modele.getClassLabels();
+    journal('Modèle chargé : ' + labels.join(' / '));
+    construireMapping();
+    webcam = new tmImage.Webcam(300, 300, true);
+    await webcam.setup();
+    await webcam.play();
+    $('webcam-holder').innerHTML = '';
+    $('webcam-holder').appendChild(webcam.canvas);
+    construireBarres();
+    $('decision').textContent = 'Modèle prêt. Présentez un objet !';
+    window.requestAnimationFrame(boucle);
+  } catch (e) {
+    journal('ERREUR : ' + e.message);
+    alert('Impossible de charger le modèle. Vérifiez le lien (il doit finir par /) et la connexion internet.');
+    $('btn-charger').disabled = false;
+  }
+};
+
+function devinerCommande(nom) {
+  const n = nom.toUpperCase();
+  if (n.includes('RECYCL') || n.includes('JAUNE')) return '1';
+  if (n.includes('ORDURE') || n.includes('MARRON')) return '2';
+  return '0';
+}
+function construireMapping() {
+  $('mapping').innerHTML = '<label>Association classe → commande :</label>';
+  labels.forEach((nom, i) => {
+    const sel = document.createElement('div');
+    sel.className = 'reglage';
+    sel.innerHTML = `<span style="width:40%;font-weight:bold">${nom}</span>
+      <select data-classe="${i}">
+        <option value="1">→ commande 1 (couvercle JAUNE)</option>
+        <option value="2">→ commande 2 (couvercle MARRON)</option>
+        <option value="0">→ rien (aucune action)</option>
+      </select>`;
+    $('mapping').appendChild(sel);
+    sel.querySelector('select').value = devinerCommande(nom);
+  });
+}
+function commandePour(indexClasse) {
+  const sel = document.querySelector(`select[data-classe="${indexClasse}"]`);
+  return sel ? sel.value : '0';
+}
+function construireBarres() {
+  $('predictions').innerHTML = '';
+  labels.forEach((nom, i) => {
+    const div = document.createElement('div');
+    div.className = 'classe';
+    div.innerHTML = `<div class="ligne"><span class="nom">${nom}</span>
+      <div class="barre"><div id="barre-${i}"></div></div>
+      <span class="pct" id="pct-${i}">0 %</span></div>`;
+    $('predictions').appendChild(div);
+  });
+}
+
+/* ---------------- boucle de prédiction ---------------- */
+async function boucle() {
+  webcam.update();
+  const preds = await modele.predict(webcam.canvas);
+  let top = 0;
+  preds.forEach((p, i) => {
+    const pct = Math.round(p.probability * 100);
+    $('barre-' + i).style.width = pct + '%';
+    $('pct-' + i).textContent = pct + ' %';
+    if (p.probability > preds[top].probability) top = i;
+  });
+  decider(top, preds[top].probability);
+  window.requestAnimationFrame(boucle);
+}
+
+function decider(index, prob) {
+  const seuil = Number($('seuil').value) / 100;
+  const stableMs = Number($('stable').value);
+  const cooldownMs = Number($('cooldown').value);
+  const maintenant = Date.now();
+  const cmd = commandePour(index);
+
+  if (maintenant < prochainEnvoi) {
+    $('decision').textContent = '⏸ Pause… (' + Math.ceil((prochainEnvoi - maintenant)/1000) + ' s)';
+    $('decision').className = '';
+    return;
+  }
+  if (prob < seuil || cmd === '0') {
+    candidat = null;
+    $('decision').textContent = cmd === '0' && prob >= seuil ? 'Rien à trier.' : 'Confiance insuffisante… (seuil ' + $('seuil').value + ' %)';
+    $('decision').className = '';
+    return;
+  }
+  if (candidat !== index) { candidat = index; candidatDepuis = maintenant; }
+  const restant = stableMs - (maintenant - candidatDepuis);
+  if (restant > 0) {
+    $('decision').textContent = labels[index] + ' détecté… vérification ' + Math.ceil(restant/100)/10 + ' s';
+    $('decision').className = '';
+    return;
+  }
+  // décision confirmée
+  envoyer(cmd, labels[index] + ' (' + Math.round(prob*100) + ' %)');
+  $('decision').textContent = '✅ ' + labels[index] + ' → commande ' + cmd + ' envoyée !';
+  $('decision').className = cmd === '1' ? 'jaune' : 'marron';
+  candidat = null;
+  prochainEnvoi = maintenant + cooldownMs;
+}
+
+/* ---------------- liaison série ---------------- */
+$('btn-serie').onclick = async () => {
+  if (serieOK) { await deconnecter(); return; }
+  try {
+    port = await navigator.serial.requestPort();
+    await port.open({ baudRate: 9600 });
+    writer = port.writable.getWriter();
+    journal('Port série ouvert (9600 bauds). La carte redémarre, patientez 2 s…');
+    await new Promise(r => setTimeout(r, 2000));
+    serieOK = true;
+    $('etat-serie').textContent = 'connectée';
+    $('etat-serie').className = 'badge on';
+    $('btn-serie').textContent = 'Déconnecter l\u2019Arduino';
+    document.querySelectorAll('.manuel button').forEach(b => b.disabled = false);
+    journal('Arduino prête à recevoir les ordres.');
+  } catch (e) {
+    journal('Connexion série annulée ou impossible : ' + e.message);
+  }
+};
+async function deconnecter() {
+  try { if (writer) { writer.releaseLock(); } if (port) await port.close(); } catch(e){}
+  serieOK = false; writer = null; port = null;
+  $('etat-serie').textContent = 'déconnectée';
+  $('etat-serie').className = 'badge off';
+  $('btn-serie').textContent = 'Connecter l\u2019Arduino (port série)';
+  document.querySelectorAll('.manuel button').forEach(b => b.disabled = true);
+  journal('Port série fermé.');
+}
+async function envoyer(cmd, motif) {
+  journal('Décision IA : ' + (motif || '') + ' → envoi de "' + cmd + '"');
+  if (!serieOK || !writer) { journal('⚠ Arduino non connectée : ordre non transmis.'); return; }
+  try {
+    await writer.write(new TextEncoder().encode(cmd));
+  } catch (e) {
+    journal('ERREUR d\u2019envoi : ' + e.message);
+    await deconnecter();
+  }
+}
+document.querySelectorAll('.manuel button').forEach(b => {
+  b.onclick = () => envoyer(b.dataset.cmd, 'test manuel');
+});
+if ('serial' in navigator) {
+  navigator.serial.addEventListener('disconnect', () => { journal('⚠ Câble débranché !'); deconnecter(); });
+}
+journal('Page prête. 1) Chargez le modèle  2) Connectez la carte  3) Triez !');
+</script>
+</body>
+</html>

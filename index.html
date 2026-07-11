@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>La poubelle intelligente — Technologie 4°</title>
+<style>
+  :root{--bleu:#2563EB;--bleu-fonce:#1E40AF;--vert:#16A34A;--gris:#6B7280;--fond:#F3F6FC;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:Arial,Helvetica,sans-serif;background:var(--fond);color:#1F2937;
+    min-height:100vh;display:flex;flex-direction:column;}
+  header{background:var(--bleu);color:#fff;padding:22px 24px;text-align:center;}
+  header h1{font-size:1.5rem;margin-bottom:4px;}
+  header p{font-size:.9rem;opacity:.9;font-style:italic;}
+  main{flex:1;max-width:900px;margin:0 auto;padding:34px 18px;width:100%;}
+  .intro{text-align:center;color:var(--gris);margin-bottom:30px;font-size:1rem;}
+  .grille{display:grid;grid-template-columns:1fr 1fr;gap:22px;}
+  @media(max-width:680px){.grille{grid-template-columns:1fr;}}
+  .tuile{background:#fff;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.09);
+    padding:28px;text-align:center;text-decoration:none;color:inherit;
+    display:flex;flex-direction:column;align-items:center;transition:.18s;border:2px solid transparent;}
+  .tuile:hover{transform:translateY(-4px);box-shadow:0 8px 22px rgba(37,99,235,.18);border-color:var(--bleu);}
+  .tuile .emo{font-size:3.2rem;margin-bottom:10px;}
+  .tuile h2{color:var(--bleu-fonce);font-size:1.25rem;margin-bottom:8px;}
+  .tuile p{font-size:.86rem;color:var(--gris);line-height:1.5;}
+  .tuile .cta{margin-top:16px;background:var(--bleu);color:#fff;padding:9px 20px;
+    border-radius:8px;font-weight:bold;font-size:.9rem;}
+  .tuile.eval .cta{background:var(--vert);}
+  footer{text-align:center;font-size:.78rem;color:var(--gris);padding:18px;}
+  .note{max-width:900px;margin:6px auto 0;padding:0 18px;font-size:.8rem;color:var(--gris);text-align:center;}
+</style>
+</head>
+<body>
+<header>
+  <h1>🗑️🤖 La poubelle intelligente</h1>
+  <p>Technologie 4° · Collège Saint-Pierre · Les Essarts</p>
+</header>
+<main>
+  <p class="intro">Choisis l'outil dont tu as besoin pour la séquence.</p>
+  <div class="grille">
+    <a class="tuile" href="pilotage.html">
+      <div class="emo">🎥➡️🔌</div>
+      <h2>Poste de pilotage IA</h2>
+      <p>Relie ton modèle d'intelligence artificielle à la carte Arduino pour faire trier
+      la poubelle. Activités 3, 4 et 5.</p>
+      <span class="cta">Ouvrir le pilotage</span>
+    </a>
+    <a class="tuile eval" href="evaluation.html">
+      <div class="emo">📝</div>
+      <h2>Évaluation</h2>
+      <p>Mode entraînement (libre, correction immédiate) ou évaluation finale notée
+      (code fourni par le professeur).</p>
+      <span class="cta">Ouvrir l'évaluation</span>
+    </a>
+  </div>
+</main>
+<p class="note">💡 Le poste de pilotage nécessite Google Chrome ou Microsoft Edge (webcam + liaison série).</p>
+<footer>Séquence pédagogique « La poubelle intelligente » — Année scolaire 2026-2027</footer>
+</body>
+</html>
